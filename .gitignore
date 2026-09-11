@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# Node / React
+node_modules/
+dist/
+build/
+.DS_Store
+
+# Docker data mounts
+postgres_data/

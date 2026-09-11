@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: infra_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: telemetry
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d telemetry"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: infra_backend
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    pid: "host"
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/telemetry
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - AUTO_HEAL_THRESHOLD=85
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: infra_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  mcp_server:
+    build: ./mcp_server
+    container_name: infra_mcp_server
+    command: python server.py
+    ports:
+      - "8001:8001"
+
+volumes:
+  pgdata:
